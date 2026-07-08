@@ -1,0 +1,12 @@
+{
+  "version": 2,
+  "routes": [
+    {
+      "src": "/(.*)",
+      "dest": "https://header-subsidiary-eleven-sewing.trycloudflare.com",
+      "headers": {
+        "Host": "https://header-subsidiary-eleven-sewing.trycloudflare.com"
+      }
+    }
+  ]
+}
