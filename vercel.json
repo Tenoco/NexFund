@@ -3,9 +3,9 @@
   "routes": [
     {
       "src": "/(.*)",
-      "dest": "https://header-subsidiary-eleven-sewing.trycloudflare.com",
+      "dest": "https://utilities-nature-passengers-str.trycloudflare.com",
       "headers": {
-        "Host": "https://header-subsidiary-eleven-sewing.trycloudflare.com"
+        "Host": "https://utilities-nature-passengers-str.trycloudflare.com"
       }
     }
   ]
