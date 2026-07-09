@@ -3,9 +3,9 @@
   "routes": [
     {
       "src": "/(.*)",
-      "dest": "https://precise-wiley-counting-survey.trycloudflare.com",
+      "dest": "https://privileges-movies-ports-nextel.trycloudflare.com",
       "headers": {
-        "Host": "https://precise-wiley-counting-survey.trycloudflare.com"
+        "Host": "https://privileges-movies-ports-nextel.trycloudflare.com"
       }
     }
   ]
