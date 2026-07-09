@@ -3,9 +3,9 @@
   "routes": [
     {
       "src": "/(.*)",
-      "dest": "https://api.trycloudflare.com",
+      "dest": "https://innovations-burns-reply-usr.trycloudflare.com",
       "headers": {
-        "Host": "https://api.trycloudflare.com"
+        "Host": "https://innovations-burns-reply-usr.trycloudflare.com"
       }
     }
   ]
