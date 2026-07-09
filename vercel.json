@@ -3,9 +3,9 @@
   "routes": [
     {
       "src": "/(.*)",
-      "dest": "https://innovations-burns-reply-usr.trycloudflare.com",
+      "dest": "https://hearts-refused-surrounded-ralph.trycloudflare.com",
       "headers": {
-        "Host": "https://innovations-burns-reply-usr.trycloudflare.com"
+        "Host": "https://hearts-refused-surrounded-ralph.trycloudflare.com"
       }
     }
   ]
