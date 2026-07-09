@@ -3,9 +3,9 @@
   "routes": [
     {
       "src": "/(.*)",
-      "dest": "https://utilities-nature-passengers-str.trycloudflare.com",
+      "dest": "https://optimal-rail-wagner-extraction.trycloudflare.com",
       "headers": {
-        "Host": "https://utilities-nature-passengers-str.trycloudflare.com"
+        "Host": "https://optimal-rail-wagner-extraction.trycloudflare.com"
       }
     }
   ]
