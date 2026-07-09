@@ -3,9 +3,9 @@
   "routes": [
     {
       "src": "/(.*)",
-      "dest": "https://hearts-refused-surrounded-ralph.trycloudflare.com",
+      "dest": "https://placement-compute-six-prepared.trycloudflare.com",
       "headers": {
-        "Host": "https://hearts-refused-surrounded-ralph.trycloudflare.com"
+        "Host": "https://placement-compute-six-prepared.trycloudflare.com"
       }
     }
   ]
