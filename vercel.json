@@ -3,9 +3,9 @@
   "routes": [
     {
       "src": "/(.*)",
-      "dest": "https://jumping-naples-actor-herself.trycloudflare.com",
+      "dest": "https://institution-messenger-statement-financing.trycloudflare.com",
       "headers": {
-        "Host": "https://jumping-naples-actor-herself.trycloudflare.com"
+        "Host": "https://institution-messenger-statement-financing.trycloudflare.com"
       }
     }
   ]
