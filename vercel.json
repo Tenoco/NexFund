@@ -3,9 +3,9 @@
   "routes": [
     {
       "src": "/(.*)",
-      "dest": "https://involved-jvc-jackie-lite.trycloudflare.com",
+      "dest": "https://charms-mpg-advisory-tone.trycloudflare.com",
       "headers": {
-        "Host": "https://involved-jvc-jackie-lite.trycloudflare.com"
+        "Host": "https://charms-mpg-advisory-tone.trycloudflare.com"
       }
     }
   ]
