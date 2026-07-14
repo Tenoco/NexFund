@@ -3,9 +3,9 @@
   "routes": [
     {
       "src": "/(.*)",
-      "dest": "https://start-mason-obtaining-cancellation.trycloudflare.com",
+      "dest": "https://phpbb-darwin-recently-ladies.trycloudflare.com",
       "headers": {
-        "Host": "https://start-mason-obtaining-cancellation.trycloudflare.com"
+        "Host": "https://phpbb-darwin-recently-ladies.trycloudflare.com"
       }
     }
   ]
