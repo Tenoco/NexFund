@@ -20,9 +20,213 @@ app.config['SESSION_REFRESH_EACH_REQUEST'] = True
 app.config['MAX_CONTENT_LENGTH'] = 8 * 1024 * 1024  # 8MB upload cap
 
 # ── CPU GOVERNOR: keeps average CPU usage near 20% of one core ──
-_cpu_target = 0.20
-_cpu_start_wall = time.time()
+# ==========================================
+# CONFIGURATION
+# ==========================================
+PLANS_10DAY = [
+    {'id': 1, 'name': 'Plan 1', 'price': 500, 'daily': 100, 'period': 10, 'total': 1000, 'tab': '10day'},
+    {'id': 2, 'name': 'Plan 2', 'price': 1000, 'daily': 200, 'period': 10, 'total': 2000, 'tab': '10day'},
+    {'id': 3, 'name': 'Plan 3', 'price': 2000, 'daily': 400, 'period': 10, 'total': 4000, 'tab': '10day'},
+    {'id': 4, 'name': 'Plan 4', 'price': 5000, 'daily': 1000, 'period': 10, 'total': 10000, 'tab': '10day'},
+    {'id': 5, 'name': 'Plan 5', 'price': 10000, 'daily': 2000, 'period': 10, 'total': 20000, 'tab': '10day'},
+]
 
+PLANS_MONTHLY = [
+    {'id': 6, 'name': 'Monthly Plan 1', 'price': 3000, 'daily': 150, 'period': 30, 'total': 4500, 'tab': 'monthly'},
+    {'id': 7, 'name': 'Monthly Plan 2', 'price': 7000, 'daily': 350, 'period': 30, 'total': 10500, 'tab': 'monthly'},
+    {'id': 8, 'name': 'Monthly Plan 3', 'price': 10000, 'daily': 500, 'period': 30, 'total': 15000, 'tab': 'monthly'},
+    {'id': 9, 'name': 'Monthly Plan 4', 'price': 15000, 'daily': 750, 'period': 30, 'total': 22500, 'tab': 'monthly'},
+    {'id': 10, 'name': 'Monthly Plan 5', 'price': 20000, 'daily': 1000, 'period': 30, 'total': 30000, 'tab': 'monthly'},
+    {'id': 11, 'name': 'Monthly Plan 6', 'price': 50000, 'daily': 2500, 'period': 30, 'total': 75000, 'tab': 'monthly'},
+    {'id': 12, 'name': 'Monthly Plan 7', 'price': 70000, 'daily': 3500, 'period': 30, 'total': 105000, 'tab': 'monthly'},
+    {'id': 13, 'name': 'Monthly Plan 8', 'price': 100000, 'daily': 5000, 'period': 30, 'total': 150000, 'tab': 'monthly'},
+]
+
+# Combined list, kept under the old name so every existing lookup
+# (by id, via `next(p for p in PLANS if p['id'] == ...)`) still works unchanged.
+PLANS = PLANS_10DAY + PLANS_MONTHLY
+
+def get_plan_by_id(plan_id):
+    return next((p for p in PLANS if p['id'] == plan_id), None)
+
+ADMIN_CREDS = {'username': 'vertxtheadmin', 'password': 'nexfundultimateadmin920'}
+
+COMPANY_ACCOUNT = {
+    'bank': 'Tenn Mfb',
+    'name': 'Ayomide David',
+    'number': '8127415133'
+}
+
+GITHUB_TOKEN = "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"
+GITHUB_REPO = 'Tenoco/DownloadFile'
+GITHUB_BRANCH = 'main'
+
+# Simple global throttle so bursts of uploads (many users completing tasks
+# at once) don't slam the GitHub API and trip rate limits.
+_github_lock = threading.Lock()
+_github_last_call = [0.0]
+GITHUB_MIN_INTERVAL = 1.2  # seconds between any two GitHub API calls
+
+def github_request(method, url, **kwargs):
+    """Wrapper around requests that serializes and spaces out GitHub API calls,
+    and retries once with backoff if we get rate-limited."""
+    with _github_lock:
+        wait = GITHUB_MIN_INTERVAL - (time.time() - _github_last_call[0])
+        if wait > 0:
+            time.sleep(wait)
+        resp = requests.request(method, url, **kwargs)
+        _github_last_call[0] = time.time()
+
+    if resp.status_code in (403, 429):
+        retry_after = resp.headers.get('Retry-After')
+        backoff = float(retry_after) if retry_after else 5.0
+        time.sleep(backoff)
+        with _github_lock:
+            resp = requests.request(method, url, **kwargs)
+            _github_last_call[0] = time.time()
+
+    return resp
+
+# ==========================================
+# DATABASE HELPER FUNCTIONS
+# ==========================================
+_db_conn = None
+
+def get_db():
+    global _db_conn
+    if _db_conn is None:
+        _db_conn = sqlite3.connect('nexfund.db', check_same_thread=False, timeout=15)
+        _db_conn.row_factory = sqlite3.Row
+        _db_conn.execute("PRAGMA journal_mode=WAL")
+        _db_conn.execute("PRAGMA synchronous=NORMAL")
+        _db_conn.execute("PRAGMA cache_size=-2000")
+        _db_conn.execute("PRAGMA temp_store=MEMORY")
+    return _db_conn
+
+def init_db():
+    with get_db() as conn:
+        c = conn.cursor()
+        c.execute('''CREATE TABLE IF NOT EXISTS users (
+            username TEXT PRIMARY KEY, password TEXT, referred_by TEXT, 
+            bal_affiliate INTEGER, bal_invest INTEGER, bal_task INTEGER, 
+            bank_name TEXT, acc_no TEXT, acc_name TEXT, ref_tasks_count INTEGER,
+            banned INTEGER DEFAULT 0
+        )''')
+        try:
+            c.execute("ALTER TABLE users ADD COLUMN banned INTEGER DEFAULT 0")
+        except sqlite3.OperationalError:
+            pass
+        c.execute('''CREATE TABLE IF NOT EXISTS tasks (
+            id INTEGER PRIMARY KEY AUTOINCREMENT, title TEXT, desc TEXT, link TEXT, pay INTEGER
+        )''')
+        c.execute('''CREATE TABLE IF NOT EXISTS user_tasks (
+            id INTEGER PRIMARY KEY AUTOINCREMENT, username TEXT, task_id INTEGER, 
+            proof_b64 TEXT, status TEXT, date TEXT
+        )''')
+        c.execute('''CREATE TABLE IF NOT EXISTS investments (
+            id INTEGER PRIMARY KEY AUTOINCREMENT, username TEXT, plan_id INTEGER, 
+            proof_b64 TEXT, status TEXT, date TEXT, days_elapsed INTEGER, sender_name TEXT
+        )''')
+        try:
+            c.execute("ALTER TABLE investments ADD COLUMN sender_name TEXT")
+        except sqlite3.OperationalError:
+            pass
+        c.execute('''CREATE TABLE IF NOT EXISTS withdrawals (
+            id INTEGER PRIMARY KEY AUTOINCREMENT, username TEXT, type TEXT, 
+            amount INTEGER, status TEXT, date TEXT, bank_name TEXT, acc_no TEXT, acc_name TEXT
+        )''')
+        c.execute('''CREATE TABLE IF NOT EXISTS settings (key TEXT PRIMARY KEY, value INTEGER)''')
+        c.execute('''CREATE TABLE IF NOT EXISTS notifications (
+            id INTEGER PRIMARY KEY AUTOINCREMENT, username TEXT, message TEXT, date TEXT, read INTEGER DEFAULT 0
+        )''')
+        
+        c.execute("INSERT OR IGNORE INTO settings (key, value) VALUES ('withdraw_affiliate', 1), ('withdraw_invest', 1), ('withdraw_task', 1)")
+        c.execute("INSERT OR IGNORE INTO settings (key, value) VALUES ('min_withdraw_affiliate', 0), ('min_withdraw_invest', 0), ('min_withdraw_task', 0)")
+        
+        c.execute("SELECT COUNT(*) FROM tasks")
+        if c.fetchone()[0] == 0:
+            c.execute("INSERT INTO tasks (title, desc, link, pay) VALUES (?, ?, ?, ?)", 
+                      ('Join WhatsApp Group', 'Join our official community', 'https://wa.me/group', 100))
+        conn.commit()
+
+with app.app_context():
+    init_db()
+
+@lru_cache(maxsize=32)
+def _compile_page(content_key):
+    return app.jinja_env.from_string(HTML_TEMPLATE.replace('{% block content %}{% endblock %}', content_key))
+
+def render_page(content, **context):
+    app.update_template_context(context)
+    return _compile_page(content).render(context)
+
+@app.after_request
+def compress_response(resp):
+    if 'gzip' not in request.headers.get('Accept-Encoding', '').lower():
+        return resp
+    if resp.status_code >= 300 or resp.direct_passthrough or 'Content-Encoding' in resp.headers:
+        return resp
+    data = resp.get_data()
+    if len(data) < 500:
+        return resp
+    buf = BytesIO()
+    with gzip.GzipFile(mode='wb', fileobj=buf, compresslevel=6) as gz:
+        gz.write(data)
+    resp.set_data(buf.getvalue())
+    resp.headers['Content-Encoding'] = 'gzip'
+    resp.headers['Content-Length'] = len(resp.get_data())
+    resp.headers['Vary'] = 'Accept-Encoding'
+    return resp
+
+@app.context_processor
+def inject_notifications():
+    username, user = get_user()
+    if username and username != 'admin':
+        with get_db() as conn:
+            count = conn.execute("SELECT COUNT(*) FROM notifications WHERE username=? AND read=0", (username,)).fetchone()[0]
+        return {'unread_notifications': count}
+    return {'unread_notifications': 0}
+
+def get_user():
+    if 'user' in session:
+        if session['user'] == 'admin':
+            return 'admin', None
+        with get_db() as conn:
+            user = conn.execute("SELECT * FROM users WHERE username = ?", (session['user'],)).fetchone()
+            if user and user['banned']:
+                session.pop('user', None)
+                return None, None
+            if user:
+                return session['user'], dict(user)
+    return None, None
+
+def process_file(file, subfolder='misc'):
+    if file and file.filename != '':
+        file_bytes = file.read()
+        ext = file.filename.rsplit('.', 1)[-1].lower() if '.' in file.filename else 'png'
+        filename = f"{uuid.uuid4().hex}.{ext}"
+        path = f"NexFund/{subfolder}/{filename}"
+
+        try:
+            resp = github_request(
+                'PUT',
+                f"https://api.github.com/repos/{GITHUB_REPO}/contents/{path}",
+                headers={
+                    "Authorization": f"token {GITHUB_TOKEN}",
+                    "Accept": "application/vnd.github+json"
+                },
+                json={
+                    "message": f"Upload proof {filename}",
+                    "content": base64.b64encode(file_bytes).decode('utf-8'),
+                    "branch": GITHUB_BRANCH
+                },
+                timeout=15
+            )
+            if resp.status_code in (200, 201):
+                return f"https://raw.githubusercontent.com/{GITHUB_REPO}/{GITHUB_BRANCH}/{path}"
+            else:
+                print("GitHub upload failed:", resp.status_code, resp.text)
+                return None
         except Exception as e:
             print("GitHub upload error:", e)
             return None
@@ -1595,5 +1799,4 @@ def logout():
     return redirect(url_for('landing'))
 
 if __name__ == '__main__':
-    import os
     app.run(host='0.0.0.0', port=int(os.environ.get('PORT', 5022)), debug=False, threaded=False, use_reloader=False)
