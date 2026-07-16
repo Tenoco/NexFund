@@ -3,9 +3,9 @@
   "routes": [
     {
       "src": "/(.*)",
-      "dest": "https://pick-intermediate-worth-policies.trycloudflare.com",
+      "dest": "https://champion-collections-basic-research.trycloudflare.com",
       "headers": {
-        "Host": "https://pick-intermediate-worth-policies.trycloudflare.com"
+        "Host": "https://champion-collections-basic-research.trycloudflare.com"
       }
     }
   ]
