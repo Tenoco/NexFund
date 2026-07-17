@@ -3,10 +3,7 @@
   "routes": [
     {
       "src": "/(.*)",
-      "dest": "https://echonet-zro9.onrender.com/nexfund/",
-      "headers": {
-        "Host": "https://echonet-zro9.onrender.com/nexfund/"
-      }
+      "dest": "https://echonet-zro9.onrender.com/nexfund/$1"
     }
   ]
 }
