@@ -3,9 +3,9 @@
   "routes": [
     {
       "src": "/(.*)",
-      "dest": "https://lion-emotional-convert-replace.trycloudflare.com",
+      "dest": "https://echonet-zro9.onrender.com/nexfund/",
       "headers": {
-        "Host": "https://lion-emotional-convert-replace.trycloudflare.com"
+        "Host": "https://echonet-zro9.onrender.com/nexfund/"
       }
     }
   ]
